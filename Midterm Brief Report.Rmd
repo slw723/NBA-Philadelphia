@@ -1,0 +1,73 @@
+---
+title: "Brief Analysis of Philadelphia 76ers Shot Data"
+output:
+  word_document: default
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE, warning=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+## Philadelphia 76ers Shot Data
+
+```{r, include=FALSE, message=FALSE, warning=FALSE}
+library(tidyverse)
+library(ggplot2)
+library(nbastatR)
+Sys.setenv("VROOM_CONNECTION_SIZE" = 131072 * 2)
+library(gganimate)
+library(gapminder)
+library(gifski)
+library(lubridate)
+library(maps)
+library(mapdata)
+library(transformr)
+library(ggthemes)
+library(grid)
+library(jpeg)
+library(RCurl)
+```
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+courtImg.jpg = "https://thedatagame.files.wordpress.com/2016/03/nba_court.jpg"
+court <- rasterGrob(readJPEG("nba_court.jpg"), 
+                    width=unit(1,"npc"), height=unit(1, "npc"))
+
+philly_shots_2005 = teams_shots(teams = "Philadelphia 76ers", seasons = 2005)
+philly_shots_2010 = teams_shots(teams = "Philadelphia 76ers", seasons = 2010)
+philly_shots_2015 = teams_shots(teams = "Philadelphia 76ers", seasons = 2015)
+philly_shots_2019 = teams_shots(teams = "Philadelphia 76ers", seasons = 2019)
+
+philly_shots_all = bind_rows(philly_shots_2005, philly_shots_2010, philly_shots_2015, philly_shots_2019)
+
+#Graphs the shot data for Philadelphia 76ers 
+philly_shot_court = ggplot(philly_shots_all, aes(x=locationX, y=locationY), group = "yearSeason") + 
+   annotation_custom(court, -250, 250, -50, 420) +
+   geom_point(aes(color = yearSeason, shape = typeEvent), size = 1, alpha = 0.50) +
+   xlim(-250, 250) +
+   ylim(-50, 420) +
+   ggtitle("Shot Chart for Philadelphia 76ers") +
+   xlab("Horizontal Location(1/10 foot)") +
+   ylab("Vertical Location(1/10 foot)") +
+   labs(shape = "Type of Event", color = "Season")
+
+philly_shot_court + 
+   transition_states(yearSeason) + 
+   enter_fade() +
+   exit_shrink()
+```
+
+## Findings
+
+- More shots are taken near the basket than anywhere else on the court.
+- More three point shots are missed than made.
+- In the earlier seasons, the shots are more evenly distributed.
+- Most of the three point shots are taken from the corners of the court.
+
+## More Detail
+
+In the earlier seasons, specifically in 2005 and 2010, the shots are more evenly distributed throughout the half court without a distinct area on the court where a lot of shots occur. This transitions in seasons 2015 and 2019 where it is clearly shown that more shots are taken near the basket and right outside the three point line. Specifically with three point shots, the majority of those shots are taken from the edges of the three point line, or the corners of the court for all seasons. Similar to the three point shots, a large proportion of the two point shots are layup shots, which are shots taken near the basket. Also, as the year increases, a larger proportion of the shots are layup shots. From this graph, it shows that in the earlier seasons, the shots were more spread out without common shot areas on the court, and in the later seasons, a few common shot areas developed including layup shots near the basket, and three point shots just outside of the three point line. This could suggest that there was a change in strategy between 2010 and 2015 for where the shots should be taken. 
+

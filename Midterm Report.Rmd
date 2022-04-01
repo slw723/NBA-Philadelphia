@@ -1,0 +1,98 @@
+---
+title: "Analysis of Philadelphia 76ers Shot Data"
+output:
+  word_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE, warning=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Philadelphia 76ers Shot Data
+
+```{r, include=FALSE, message=FALSE, warning=FALSE}
+library(tidyverse)
+library(ggplot2)
+library(nbastatR)
+Sys.setenv("VROOM_CONNECTION_SIZE" = 131072 * 2)
+library(gganimate)
+library(gapminder)
+library(gifski)
+library(lubridate)
+library(maps)
+library(mapdata)
+library(transformr)
+library(ggthemes)
+library(grid)
+library(jpeg)
+library(RCurl)
+```
+
+```{r shotData, echo=TRUE, message=FALSE, warning=FALSE}
+#Takes an NBA court image from the internet and assigns it to court. The image is a JPEG, so use the the readJPEG function. 
+courtImg.jpg = "https://thedatagame.files.wordpress.com/2016/03/nba_court.jpg"
+court <- rasterGrob(readJPEG("nba_court.jpg"), 
+                    width=unit(1,"npc"), height=unit(1, "npc"))
+
+#Created four dataframes with Philadelphia 76ers shot data for 2005, 2010, 2015, and 2019 seasons using teams_shots function.
+philly_shots_2005 = teams_shots(teams = "Philadelphia 76ers", seasons = 2005)
+philly_shots_2010 = teams_shots(teams = "Philadelphia 76ers", seasons = 2010)
+philly_shots_2015 = teams_shots(teams = "Philadelphia 76ers", seasons = 2015)
+philly_shots_2019 = teams_shots(teams = "Philadelphia 76ers", seasons = 2019)
+
+#Combined all of the rows from these four dataframes using the bind_rows function. I can do this because all four dataframes have the same columns in the same order. 
+philly_shots_all = bind_rows(philly_shots_2005, philly_shots_2010, philly_shots_2015, philly_shots_2019)
+
+#Philadelphia shot data using ggplot and geom_point functions. Assigned the graph to philly_shot_court. The color changes by the season, and the shape is determined by type of event. Alpha is the opacity level, which is set at 0.5.
+philly_shot_court = ggplot(philly_shots_all, aes(x=locationX, y=locationY), group = "yearSeason") + 
+   annotation_custom(court, -250, 250, -50, 420) +
+   geom_point(aes(color = yearSeason, shape = typeEvent), size = 1, alpha = 0.50) +
+   xlim(-250, 250) +
+   ylim(-50, 420) +
+   ggtitle("Shot Chart for Philadelphia 76ers") +
+   xlab("Horizontal Location(1/10 foot)") +
+   ylab("Vertical Location(1/10 foot)") +
+   labs(shape = "Type of Event", color = "Season")
+
+#Using the same philly_shot_court variable and adding animation that transitions over seasons
+philly_shot_court + 
+   transition_states(yearSeason) + 
+   enter_fade() +
+   exit_shrink()
+```
+
+## Philadelphia 76ers Findings
+
+In the earlier seasons, specifically in 2005 and 2010, the shots are more evenly distributed throughout the half court without a distinct area on the court where a lot of shots occur. This transitions in seasons 2015 and 2019 where it is clearly shown that more shots are taken near the basket and right outside the three point line. Specifically with three point shots, the majority of those shots are taken from the edges of the three point line, or the corners of the court for all seasons. Similar to the three point shots, a large proportion of the two point shots are layup shots, which are shots taken near the basket. Also, as the year increases, a larger proportion of the shots are layup shots. From this graph, it shows that in the earlier seasons, the shots were more spread out without common shot areas on the court, and in the later seasons, a few common shot areas developed including layup shots near the basket, and three point shots just outside of the three point line. This could suggest that there was a change in strategy between 2010 and 2015 for where the shots should be taken.
+
+## NBA Teams 2018 Data
+
+```{r}
+#Creates a dataframe called season_standing_2018 with standings data for all NBA teams during the 2018 regular season
+season_standing_2018 = standings(seasons = 2018, season_types = c("Regular Season"), resolve_records = TRUE, nest_data = F, return_message = TRUE)
+
+#Creates a dataframe called team_ranking_2018 with rank data for all NBA teams in the 2018 season
+team_ranking_2018 = teams_rankings(seasons = 2018, nest_data = F, return_message = T)
+
+#variables_keep has the names of the columns from the two dataframes that are kept in the new dataframe called percent_win_rank. percent_win_rank is a dataframe that was created using left_join by the nameTeam variable.
+variables_keep = c("nameTeam", "pctWinTeam", "ptsPerGameRank", "nameDivison")
+standing_rank_comb = left_join(season_standing_2018, team_ranking_2018, by = "nameTeam")
+percent_win_rank = standing_rank_comb[variables_keep]
+
+#Took out the LA Clippers because data was not recorded for that team in 2018. 
+percent_win_rank = percent_win_rank[-13,]
+
+#win_minutes_plot is the name of my scatterplot that graphs the percent of wins each team had and then the rank of the average number of points each team scored. 
+win_minutes_plot = ggplot(percent_win_rank, aes(y = nameTeam), group = "nameDivison") +
+   geom_point(aes(x = ptsPerGameRank, size = pctWinTeam, color = nameDivison), stat = "identity") +
+   ggtitle("NBA Teams and Rank for Points Scored") +
+   xlab("Points per Game Rank") +
+   ylab("Team Name") +
+   labs(size = "Percentage of Wins", color = "Division Name")
+win_minutes_plot
+```
+
+## NBA Teams Findings
+
+This scatterplot shows every NBA team on the y-axis and their rank of the average number of points scored in a game. The points on the graph vary in size, by the percentage of games each team won in the 2018 season, and the color of the points are determined by the division that the team plays in. It makes sense to see that the larger sized points are at a lower rank for average number of points scored. That means that teams that have a lower rank generally win more games. There is also a trend in the green points, which represents the Northwest region, where most of those points are larger, so they win more games in the season, and they have a lower to middle rank. The San Antonio Spurs are an interesting team because they have a large percentage of wins, around 50%, but their rank for average points scored is about 27 out of 30, showing that they could be an outlier in this dataset. 
